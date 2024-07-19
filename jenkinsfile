@@ -1,0 +1,47 @@
+pipeline{
+    agent{
+        node(label: 'server-node')
+    }
+    environment{
+         AWS_CRED_ID = 'aws'
+    }
+    stages {
+        stage('checkout') {
+                steps {
+                      git branch: 'main', url: 'https://gitlab.com/Somala/terraform.git', 
+                      credentialsId: 'gitlab'
+                    }
+             }
+        stage('Initialize'){
+            steps {
+               script {
+                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: env.AWS_CRED_ID]]){
+                    env.AWS_ACCESS_KEY_ID = env.AWS_ACCESS_KEY_ID
+                    env.AWS_SECRET_ACCESS_KEY = env.AWS_SECRET_ACCESS_KEY
+                    }
+                }
+            }
+        }
+
+        stage('Init') {
+            steps {
+                sh 'terraform init'
+            }
+        }
+        stage('Plan') {
+            steps {
+                
+                sh 'ls'
+                sh 'terraform plan -out tfplan'
+                sh 'terraform show -no-color tfplan > tfplan.txt'
+            }
+        }
+
+        stage('Apply') {
+            steps {
+                sh 'terraform apply -auto-approve'
+            }
+        }
+    }
+}
